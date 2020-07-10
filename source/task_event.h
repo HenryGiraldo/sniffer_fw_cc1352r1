@@ -41,7 +41,9 @@
 
 #include <ti/sysbios/knl/Event.h>
 
-#define EVENT_ID_USER_IF_TASK_END       Event_Id_00
+#define EVENT_ID_USER_IF_TASK_START     Event_Id_00
+#define EVENT_ID_USER_IF_TASK_END       Event_Id_01
+#define EVENT_ID_USER_IF_TASK_ERROR     Event_Id_02
 
 // Event handle to be shared between tasks
 extern Event_Handle TaskEvent_Handle;

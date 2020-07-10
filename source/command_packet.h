@@ -54,6 +54,7 @@
 #define PACKET_TYPE_COMMAND_RESUME                                      0x44
 #define PACKET_TYPE_COMMAND_CFG_FREQUENCY                               0x45
 #define PACKET_TYPE_COMMAND_CFG_PHY                                     0x47
+#define PACKET_TYPE_COMMAND_RESET                                       0x50
 #define PACKET_TYPE_COMMAND_CGF_BLE_INITIATOR_ADDR                      0x70
 
 // Test command packet types

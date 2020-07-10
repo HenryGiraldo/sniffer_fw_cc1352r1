@@ -47,7 +47,8 @@
 #include <ti/sysbios/hal/Hwi.h>
 
 // Default PHY number (the PHY number selected at startup)
-#define DEFAULT_PHY_NUMBER       0
+// Changed from 0 to 4 (IEEE 802.15.4)
+#define DEFAULT_PHY_NUMBER       4
 
 // Struct definition for Radio IF general timer
 typedef struct RadioIf_Timer_Obj
@@ -98,7 +99,7 @@ void RadioIF_init(void)
 
 void RadioIF_startRx(void)
 {
-    RadioIF_flushDataQueue(); 
+    RadioIF_flushDataQueue();
     RadioIF_startRfCoreRx();
     RadioIF_enableRadioTimerOverflowCallback();
 }

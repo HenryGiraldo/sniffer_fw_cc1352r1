@@ -96,7 +96,7 @@ const Phy_Obj Phy_supportedPhys[] =
   {PROPRIETARY, 1},
   {IEEE_802_15_4, 0},
   {BLE_5_1M, 0},
-  {PROPRIETARY_15_4_G, 2},
+  {PROPRIETARY_15_4_G, 2}, // This one is 802.15.4g 100Kbps
 };
 
 

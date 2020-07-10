@@ -154,7 +154,7 @@ void PacketHandler_convertStatusToCc1200FormatIeee154Api(uint8_t* status)
     *status = 0;
 
     // The following values shall give CRC_OK true in new format:
-    // - Result = 0 -> 'Packet received withour CRC error'
+    // - Result = 0 -> 'Packet received without CRC error'
     // Other values keeps CRC_OK false.
     if(result == 0)
     {

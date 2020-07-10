@@ -45,6 +45,7 @@
 #include "test_command_handler.h"
 #include "timestamp.h"
 #include "task_event.h"
+#include <ti/devices/cc13x2_cc26x2/driverlib/sys_ctrl.h>
 
 #include <stdbool.h>
 
@@ -52,6 +53,7 @@
 static SnifferState ControlTask_state = STATE_WAIT_FOR_COMMAND;
 
 // Command handling related
+static void ControlTask_handleCommandReset(void);
 static CommandPacket_Obj ControlTask_command;
 static uint8_t ControlTask_handleCommand(CommandPacket_Obj* command);
 static uint8_t ControlTask_handleCommandStart(void);
@@ -66,6 +68,7 @@ void ControlTask_setControlState(SnifferState state);
 
 // Other local functions
 static void ControlTask_notifyUserIfTask(void);
+static void ControlTask_notifyUserIfTaskEnd(void);
 
 
 //! \brief Control task function
@@ -94,13 +97,22 @@ void controlTask(UArg a0, UArg a1)
         {
             // After first command is received successfully, state is changed
             // to INIT and User Interface task is notified.
-            if(ControlTask_state == STATE_WAIT_FOR_COMMAND)
+            if (ControlTask_state == STATE_WAIT_FOR_COMMAND)
             {
-                ControlTask_notifyUserIfTask();
                 ControlTask_state = STATE_INIT;
             }
 
             status = ControlTask_handleCommand(&ControlTask_command);
+
+            if (ControlTask_state == STATE_STARTED)
+            {
+                ControlTask_notifyUserIfTask();
+            }
+            else if (ControlTask_state == STATE_STOPPED)
+            {
+                ControlTask_notifyUserIfTaskEnd();
+            }
+
         }
         // Command is completed, respond to host
         if(ControlTask_isCmdPing(&ControlTask_command))
@@ -158,6 +170,9 @@ uint8_t ControlTask_handleCommand(CommandPacket_Obj* command)
         case PACKET_TYPE_COMMAND_PING:
             status = COMMAND_OK;
             break;
+        case PACKET_TYPE_COMMAND_RESET:
+            ControlTask_handleCommandReset();
+            break;
         case PACKET_TYPE_TEST_COMMAND_TRANSMIT_SEQUENCE:
             if(ControlTask_state != STATE_STARTED)
             {
@@ -172,6 +187,12 @@ uint8_t ControlTask_handleCommand(CommandPacket_Obj* command)
     return status;
 }
 
+//! \brief handle COMMAND_RESET
+//!
+void ControlTask_handleCommandReset(void)
+{
+    SysCtrlSystemReset();
+}
 
 //! \brief handle CMD_START
 //!
@@ -321,6 +342,11 @@ uint8_t ControlTask_handleCommandCfgBleInitiatorAddr(uint8_t* commandData, uint1
 //!       Upon reception of this notification the user interface shall exit
 //!       itself.
 void ControlTask_notifyUserIfTask(void)
+{
+    Event_post(TaskEvent_Handle, EVENT_ID_USER_IF_TASK_START);
+}
+
+void ControlTask_notifyUserIfTaskEnd(void)
 {
     Event_post(TaskEvent_Handle, EVENT_ID_USER_IF_TASK_END);
 }

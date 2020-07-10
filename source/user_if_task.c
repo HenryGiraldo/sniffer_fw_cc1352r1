@@ -53,18 +53,36 @@
 // Period of user updates (1 second)
 #define USER_IF_TIMEOUT_PERIOD                  100000   // ticks of 10 us
 
+#define MONITORED_USER_EVENTS   EVENT_ID_USER_IF_TASK_START | EVENT_ID_USER_IF_TASK_END | EVENT_ID_USER_IF_TASK_ERROR
+
+// Control states
+typedef enum eState
+{
+    WAIT_FOR_COMMAND,
+    WORKING,
+    FAILED
+} eState_t;
+
 // Pin table
 static PIN_Config UserIfTask_pinTable[] =
 {
     Board_PIN_LED1 | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
     PIN_TERMINATE
 };
+
+static PIN_Config UserIfTask_redPinTable[] =
+{
+    Board_PIN_RLED | PIN_GPIO_OUTPUT_EN | PIN_GPIO_LOW | PIN_PUSHPULL | PIN_DRVSTR_MAX,
+    PIN_TERMINATE
+};
+
 static PIN_Handle UserIfTask_ledPin_Handle;
 static PIN_State UserIfTask_ledPinState;
 
-#define USER_MESSAGE "TI Packet Sniffer ver."
-static const char UserIfTask_message[] = USER_MESSAGE VERSION_STRING "\n";
+static PIN_Handle UserIfTask_redLedPin_Handle;
+static PIN_State UserIfTask_redLedPinState;
 
+#define USER_MESSAGE "TI Packet Sniffer ver."
 
 //! \brief User Interface task function
 //!        The arguments are not used.
@@ -77,6 +95,7 @@ static const char UserIfTask_message[] = USER_MESSAGE VERSION_STRING "\n";
 //!
 void userIfTask(UArg a0, UArg a1)
 {
+    eState_t state = WAIT_FOR_COMMAND;
     // Initialize the modules to be used by this task
     HostIF_init();
     TaskEvent_init();
@@ -88,22 +107,58 @@ void userIfTask(UArg a0, UArg a1)
         System_abort("Error initializing board LED pins\n");
     }
 
+    UserIfTask_redLedPin_Handle = PIN_open(&UserIfTask_redLedPinState, UserIfTask_redPinTable);
+    if(!UserIfTask_redLedPin_Handle)
+    {
+        System_abort("Error initializing board LED pins\n");
+    }
+#if 0
+    static const char UserIfTask_message[] = USER_MESSAGE VERSION_STRING "\n";
+    // Update user interface
+    HostIF_writeBuffer((uint8_t*)UserIfTask_message, sizeof(UserIfTask_message));
+#endif
     while(1)
     {
         // Let task sleep for timeout period
         Task_sleep(USER_IF_TIMEOUT_PERIOD);
-        
-        // Update user interface
-        HostIF_writeBuffer((uint8_t*)UserIfTask_message, sizeof(UserIfTask_message));
-        PIN_setOutputValue(UserIfTask_ledPin_Handle, Board_PIN_LED1,!PIN_getOutputValue(Board_PIN_LED1));
 
         // Wait for end task event
-        UInt events = Event_pend(TaskEvent_Handle, EVENT_ID_USER_IF_TASK_END, Event_Id_NONE, BIOS_NO_WAIT);
-        if(events & EVENT_ID_USER_IF_TASK_END)
+        UInt events = Event_pend(TaskEvent_Handle, Event_Id_NONE, MONITORED_USER_EVENTS, BIOS_NO_WAIT);
+
+        if (events & EVENT_ID_USER_IF_TASK_START)
         {
-            // End this task
-            PIN_close(UserIfTask_ledPin_Handle);
-            Task_exit();
+            state = WORKING;
+        }
+        else if (events & EVENT_ID_USER_IF_TASK_END)
+        {
+            state = WAIT_FOR_COMMAND;
+        }
+        else if (events & EVENT_ID_USER_IF_TASK_ERROR)
+        {
+            state = FAILED;
+        }
+        else
+        {
+            //Cannot happen
+        }
+
+        if (state == WORKING)
+        {
+            PIN_setOutputValue(UserIfTask_ledPin_Handle, Board_PIN_LED1,!PIN_getOutputValue(Board_PIN_LED1));
+            PIN_setOutputValue(UserIfTask_redLedPin_Handle, Board_PIN_RLED, 0);
+        }
+        else if (state == FAILED)
+        {
+            PIN_setOutputValue(UserIfTask_ledPin_Handle, Board_PIN_LED1, 0);
+            PIN_setOutputValue(UserIfTask_redLedPin_Handle, Board_PIN_RLED, 1);
+            break;
+        }
+        else /* WAIT_FOR_COMMAND */
+        {
+            PIN_setOutputValue(UserIfTask_ledPin_Handle, Board_PIN_LED1, 1);
         }
     }
+    PIN_close(UserIfTask_ledPin_Handle);
+    PIN_close(UserIfTask_redLedPin_Handle);
+    Task_exit();
 }
