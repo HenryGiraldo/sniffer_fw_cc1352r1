@@ -4,7 +4,7 @@ Dualband Sniffer (868MHz and 2.4GHz)
 
 ## Flash it into the board
 
-Flash sniffer_fw.bin into CC1352R1 board using UniFlash app from TI.
+Flash sniffer_fw.out into CC1352R1 board using UniFlash app from TI.
 
 ## Make it works
 
